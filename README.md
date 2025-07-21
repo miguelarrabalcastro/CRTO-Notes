@@ -1,4 +1,4 @@
-<h1>📘 Apuntes CRTO (Certified Red Team Operator)</h1>
+<h1>📘 Apuntes Certified Red Team Operator (CRTO)</h1>
 
 <p>
   Bienvenido a mi repositorio de apuntes para la certificación <strong>CRTO</strong>.
